@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Nozomi</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    #chatbox { width: 100%; height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    #input { width: 100%; padding: 10px; font-size: 16px; }
+    .system-message { color: gray; font-style: italic; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h2>Nozomi</h2>
+  <div id="chatbox"></div>
+  <input type="text" id="input" placeholder="ここに入力..." autocomplete="off" />
+
+  <div id="notification" style="
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: #f0f0f0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  display: none;
+  font-size: 14px;
+  color: #333;
+  z-index: 1000;">
+  <span id="notification-text"></span>
+  <button id="notification-close" style="border:none;background:none;font-weight:bold;float:right;">×</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
