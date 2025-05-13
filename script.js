@@ -55,7 +55,6 @@ input.addEventListener("keydown", (event) => {
   feedbackShown = false;
   scheduleFeedback();  // 再スタート
 
-
   if (event.key === "Enter" && input.value.trim() !== "") {
     const message = input.value;
     appendMessage("あなた", message);
@@ -79,29 +78,57 @@ function showSystemMessage(message) {
   const notification = document.getElementById("notification");
   const text = document.getElementById("notification-text");
   const close = document.getElementById("notification-close");
-  if (!notification || !text || !close) return;
+  const ask = document.getElementById("notification-ask");
+  if (!notification || !text || !close || !ask) return;
 
-  // 前のタイマーをキャンセルして上書き
+  // ボタン表示切り替え（6種の応答のみ表示）
+  const isPredefinedMessage = messages.some(m => `私: ${m}` === message);
+  ask.style.display = isPredefinedMessage ? "inline" : "none";
+
+
+
+  // 聞いてみる処理（GPT UIへ遷移やチャット表示など）
+  ask.onclick = () => {
+  const cleanMessage = message.replace(/^私:\s*/, '');
+  window.open(`https://chat.openai.com/chat?message=${encodeURIComponent(cleanMessage)}`, '_blank');
+};
+
+  // 通知表示処理
   if (currentNotificationTimer) {
     clearTimeout(currentNotificationTimer);
   }
 
+  // 4秒後に自動で消す
+  // ① 通知を表示する処理（即時）
   text.textContent = message;
   notification.style.display = "block";
+  notification.classList.remove("animate-out");
+  notification.classList.add("animate-in");
 
-  // 3秒後に自動で消す
+// ② 4秒後に非表示アニメーションを開始
   currentNotificationTimer = setTimeout(() => {
+    notification.classList.remove("animate-in");
+    notification.classList.add("animate-out");
+
+  // アニメーション終了後に非表示
+  setTimeout(() => {
     notification.style.display = "none";
     currentNotificationTimer = null;
-  }, 3000);
+  }, 400);
+}, 4000);
 
   // 手動で消せるようにする
   close.onclick = () => {
     clearTimeout(currentNotificationTimer);
-    notification.style.display = "none";
-    currentNotificationTimer = null;
+    notification.classList.remove("animate-in");
+    notification.classList.add("animate-out");
+    setTimeout(() => {
+      notification.style.display = "none";
+      currentNotificationTimer = null;
+    }, 400);
   };
 }
+
 
 // 状態の初期化
 function resetFeedback() {
@@ -117,7 +144,6 @@ input.addEventListener("input", (event) => {
     charCount += event.data.length;
   }
 });
-
 
 
 // --- 拡張①: 30秒ごとのチェック＋ベースライン比較（全体傾向） ---
@@ -189,4 +215,3 @@ input.addEventListener("keydown", (event) => {
 
 // if (Math.abs(speed - avgSpeed) > 10) { showSystemMessage(...) }
 // if (Math.abs(errorRate - avgError) > 4) { showSystemMessage(...) }
-
