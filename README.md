@@ -1,2 +1,2 @@
-# Nozomi1
+# nozomi-1
 Keystroke
