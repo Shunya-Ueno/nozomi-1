@@ -1,3 +1,4 @@
+音声読み上げ
 const input = document.getElementById("input");
 const chatbox = document.getElementById("chatbox");
 
@@ -12,8 +13,8 @@ let typingStartTime = Date.now();
 
 // メッセージバリエーション
 const messages = [
-  "ゆっくりで大丈夫ですよ。私がそばにいますよ。",
-  "焦らなくて大丈夫です。私はここにいますよ。",
+  "ゆっくりで大丈夫ですよ。私がそばにいます。",
+  "焦らなくて大丈夫です。私はここにいます。",
   "無理しなくても大丈夫ですよ。いつでも話してくださいね。",
   "言葉が出てこなくても大丈夫です。よろしければお手伝いしましょうか？",
   "考え中でしょうか？ ゆっくりで構いませんよ。",
@@ -46,7 +47,7 @@ function getRandomMessage() {
   } while (index === lastIndex);  // 同じものが選ばれたら再抽選
 
   lastIndex = index; // 今回のインデックスを記憶
-  return messages[index];
+  return `私: ${messages[index]}`;
 }
 
 // ユーザーのキー入力を検知
@@ -54,6 +55,7 @@ input.addEventListener("keydown", (event) => {
   clearTimeout(silenceTimer);
   feedbackShown = false;
   scheduleFeedback();  // 再スタート
+
 
   if (event.key === "Enter" && input.value.trim() !== "") {
     const message = input.value;
@@ -73,6 +75,26 @@ function appendMessage(sender, message) {
 
 let currentNotificationTimer = null; // ← 通知タイマーをグローバルで管理
 
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ja-JP";
+  utterance.rate = 1.0;  // 読み上げ速度
+  utterance.pitch = 1.2; // 声の高さ
+
+  const voices = speechSynthesis.getVoices();
+  const jpVoice = voices.find(v => v.name.includes("Google 日本語") || v.lang === "ja-JP");
+  if (jpVoice) {
+    utterance.voice = jpVoice;
+  }
+
+  speechSynthesis.speak(utterance);
+}
+
+window.speechSynthesis.onvoiceschanged = () => {
+  // ダミーで speak を一度呼んで初期化（声一覧取得をトリガー）
+  speechSynthesis.getVoices();
+};
+
 // システムからの声かけ
 function showSystemMessage(message) {
   const notification = document.getElementById("notification");
@@ -81,52 +103,38 @@ function showSystemMessage(message) {
   const ask = document.getElementById("notification-ask");
   if (!notification || !text || !close || !ask) return;
 
-  // ボタン表示切り替え（6種の応答のみ表示）
-  const isPredefinedMessage = messages.includes(message);
+// ボタン表示切り替え（6種の応答のみ表示）
+  const isPredefinedMessage = messages.some(m => `私: ${m}` === message);
   ask.style.display = isPredefinedMessage ? "inline" : "none";
 
-
-
   // 聞いてみる処理（GPT UIへ遷移やチャット表示など）
-  const cleanMessage = message.replace(/^私:\s*/, '');
-ask.onclick = () => {
-  window.open(`https://chat.openai.com/chat?message=${encodeURIComponent(cleanMessage)}`, '_blank');
-};
+  ask.onclick = () => {
+    const cleanMessage = message.replace(/^私:\s*/, '');
+    window.open(`https://chat.openai.com/chat?message=${encodeURIComponent(cleanMessage)}`, '_blank');
+  };
 
   // 通知表示処理
   if (currentNotificationTimer) {
     clearTimeout(currentNotificationTimer);
   }
 
-  // 4秒後に自動で消す
-  // ① 通知を表示する処理（即時）
   text.textContent = message;
   notification.style.display = "block";
-  notification.classList.remove("animate-out");
-  notification.classList.add("animate-in");
 
-// ② 4秒後に非表示アニメーションを開始
+  // 3秒後に自動で消す
   currentNotificationTimer = setTimeout(() => {
-    notification.classList.remove("animate-in");
-    notification.classList.add("animate-out");
-
-  // アニメーション終了後に非表示
-  setTimeout(() => {
     notification.style.display = "none";
     currentNotificationTimer = null;
-  }, 400);
-}, 4000);
+  }, 3000);
 
   // 手動で消せるようにする
   close.onclick = () => {
     clearTimeout(currentNotificationTimer);
-    notification.classList.remove("animate-in");
-    notification.classList.add("animate-out");
-    setTimeout(() => {
-      notification.style.display = "none";
-      currentNotificationTimer = null;
-    }, 400);
+    notification.style.display = "none";
+    currentNotificationTimer = null;
   };
+  
+  speak(message); // ← 音声読み上げ呼び出し
 }
 
 
@@ -144,6 +152,7 @@ input.addEventListener("input", (event) => {
     charCount += event.data.length;
   }
 });
+
 
 
 // --- 拡張①: 30秒ごとのチェック＋ベースライン比較（全体傾向） ---
@@ -173,9 +182,6 @@ setInterval(() => {
 
   speedHistory.push(speed);
   errorRateHistory.push(errorRate);
-
-  sendKeystrokeData();
-
   typingStartTime = now;
   charCount = 0;
   errorCount = 0;
@@ -218,27 +224,3 @@ input.addEventListener("keydown", (event) => {
 
 // if (Math.abs(speed - avgSpeed) > 10) { showSystemMessage(...) }
 // if (Math.abs(errorRate - avgError) > 4) { showSystemMessage(...) }
-
-function sendKeystrokeData() {
-  const now = Date.now();
-  const elapsed = (now - typingStartTime) / 1000; // 秒
-  const speed = (charCount / elapsed) * 60;
-  const errorRate = charCount > 0 ? (errorCount / charCount) * 100 : 0;
-
-  fetch("http://localhost:5000/keystroke", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      char_count: charCount,
-      interval: 0,  // 現在は記録していないが拡張可能
-      speed: speed,
-      error_rate: errorRate,
-      label: ""  // 任意で手動入力可
-    })
-  });
-
-  // カウンタ初期化
-  typingStartTime = now;
-  charCount = 0;
-  errorCount = 0;
-}
