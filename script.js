@@ -1,6 +1,8 @@
 const input = document.getElementById("input");
 const chatbox = document.getElementById("chatbox");
+const OPENAI_API_KEY = "";  // ⚠ 安全管理注意
 
+let conversationHistory = [];
 let silenceTimer = null;
 let feedbackCount = 0;
 let feedbackShown = false;
@@ -73,6 +75,7 @@ function appendMessage(sender, message) {
 
 let currentNotificationTimer = null; // ← 通知タイマーをグローバルで管理
 
+
 // システムからの声かけ
 function showSystemMessage(message) {
   const notification = document.getElementById("notification");
@@ -85,13 +88,9 @@ function showSystemMessage(message) {
   const isPredefinedMessage = messages.includes(message);
   ask.style.display = isPredefinedMessage ? "inline" : "none";
 
-
-
-  // 聞いてみる処理（GPT UIへ遷移やチャット表示など）
-  const cleanMessage = message.replace(/^私:\s*/, '');
-ask.onclick = () => {
-  window.open(`https://chat.openai.com/chat?message=${encodeURIComponent(cleanMessage)}`, '_blank');
-};
+  if (currentNotificationTimer) {
+    clearTimeout(currentNotificationTimer);
+  }
 
   // 通知表示処理
   if (currentNotificationTimer) {
@@ -242,3 +241,84 @@ function sendKeystrokeData() {
   charCount = 0;
   errorCount = 0;
 }
+
+async function queryChatGPT(userMessage) {
+  conversationHistory.push({ role: "user", content: userMessage });
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: conversationHistory,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+
+    if (!data.choices || !data.choices.length) {
+      appendMessage("Nozomi", "GPTからの返答が取得できませんでした。");
+      console.error("レスポンスが不正:", data);
+      return "";
+    }
+
+    const reply = data.choices[0].message.content;
+    conversationHistory.push({ role: "assistant", content: reply });
+    return reply;
+
+  } catch (error) {
+    appendMessage("Nozomi", "エラーが発生しました。ネットワークまたはAPIキーをご確認ください。");
+    console.error("fetchエラー:", error);
+    return "";
+  }
+}
+
+console.log("--- Debug: Checking if elements are found ---");
+console.log("Modal (gpt-input-modal):", document.getElementById("gpt-input-modal"));
+console.log("Modal Text Area (gpt-inner-text):", document.getElementById("gpt-inner-text"));
+console.log("Modal Submit Button (submit-inner):", document.getElementById("submit-inner"));
+console.log("Modal Cancel Button (cancel-inner):", document.getElementById("cancel-inner"));
+console.log("Notification Ask Button (notification-ask):", document.getElementById("notification-ask"));
+console.log("--- End Debug: Element check ---");
+
+
+// ✅「聞いてみる」ボタン → モーダルを開く
+document.getElementById("notification-ask").onclick = () => {
+  console.log("Debug: '聞いてみる' (notification-ask) button clicked."); // ← 追加
+  document.getElementById("gpt-input-modal").style.display = "block";
+};
+
+// ✅「送信」ボタン → GPTへ送信
+document.getElementById("submit-inner").onclick = async () => {
+  console.log("Debug: Modal '送信' (submit-inner) button clicked."); // ← 追加
+  const innerText = document.getElementById("gpt-inner-text").value.trim();
+  if (!innerText) {
+    console.log("Debug: Modal text is empty. Not submitting."); // ← 追加
+    return;
+  }
+
+  appendMessage("あなた", innerText);
+
+  // --- ▼▼▼ APIキーがないため、一時的にコメントアウトしてテスト ▼▼▼ ---
+const reply = await queryChatGPT(innerText);
+appendMessage("Nozomi", reply);
+  console.log("Debug: GPT call is commented out for testing."); // ← 追加 (API呼び出しをコメントアウトした場合)
+  // --- ▲▲▲ APIキーがないため、一時的にコメントアウトしてテスト ▲▲▲ ---
+
+  document.getElementById("gpt-inner-text").value = "";
+  document.getElementById("gpt-input-modal").style.display = "none";
+  console.log("Debug: Modal '送信' - gpt-input-modal display set to none."); // ← 追加
+};
+
+// ✅「キャンセル」ボタン → モーダルを閉じる
+document.getElementById("cancel-inner").onclick = () => {
+  console.log("Debug: Modal 'キャンセル' (cancel-inner) button clicked."); // ← 追加
+  document.getElementById("gpt-input-modal").style.display = "none";
+  document.getElementById("gpt-inner-text").value = "";
+  console.log("Debug: Modal 'キャンセル' - gpt-input-modal display set to none."); // ← 追加
+};

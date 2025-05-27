@@ -41,7 +41,7 @@
   </style>
 </head>
 <body>
-  <h2>Nozomi</h2>
+  <h2>nozomi</h2>
   <div id="chatbox"></div>
   <input type="text" id="input" placeholder="ここに入力..." autocomplete="off" />
 
@@ -62,6 +62,33 @@
   <button id="notification-close" style="border:none;background:none;font-weight:bold;">×</button>
 </div>
 
-  <script src="script.js"></script>
+
+<!-- 🧠 Nozomi専用：心の声を入力するモーダルUI -->
+<div id="gpt-input-modal" style="
+  display: none;
+  position: fixed; /* 画面に対して固定位置 */
+  left: auto;      /* 左からの自動位置決めを解除 */
+  right: 20px;     /* 画面の右端からpxの位置に配置 */
+  top: 30%;        /* 画面の上端から%の位置 */
+  transform: translateY(-50%); /* ウィンドウ自身の高さの半分だけ上にずらし、垂直中央揃え */
+  background: white;
+  padding: 20px;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  z-index: 1100;
+  width: 80%;
+  max-width: 500px;
+">
+  <p style="margin-bottom: 8px;">もしよければ、今感じていることを教えてください。</p>
+  <textarea id="gpt-inner-text" rows="4" style="width: 100%; padding: 10px; font-size: 14px;"></textarea>
+  <div style="text-align: right; margin-top: 10px;">
+    <button id="submit-inner" style="margin-right: 10px;">送信</button>
+    <button id="cancel-inner">キャンセル</button>
+  </div>
+</div>
+
+
+<script src="script.js"></script>  
 </body>
 </html>
