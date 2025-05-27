@@ -73,6 +73,37 @@ function appendMessage(sender, message) {
   chatbox.scrollTop = chatbox.scrollHeight;
 }
 
+// モーダル内のチャット履歴にメッセージを追加する関数
+function appendToModalChatHistory(sender, message, isUserMessage) {
+  const modalChatHistory = document.getElementById("modal-chat-history");
+  if (!modalChatHistory) {
+    console.error("Element with ID 'modal-chat-history' not found.");
+    return;
+  }
+
+  const messageElement = document.createElement("div");
+  messageElement.style.marginBottom = "8px"; // メッセージ間の余白
+
+  const senderElement = document.createElement("strong");
+  senderElement.textContent = sender + ": ";
+
+  messageElement.appendChild(senderElement);
+  messageElement.appendChild(document.createTextNode(message));
+
+  // メッセージのスタイルを送信者によって変更 (任意)
+  if (isUserMessage) {
+    messageElement.style.textAlign = "right";
+    senderElement.style.color = "#0056b3"; // ユーザーの送信者名の色
+  } else {
+    messageElement.style.textAlign = "left";
+    senderElement.style.color = "#196f3d"; // Nozomiの送信者名の色
+  }
+
+  modalChatHistory.appendChild(messageElement);
+  // 新しいメッセージが表示されるように常に一番下までスクロール
+  modalChatHistory.scrollTop = modalChatHistory.scrollHeight;
+}
+
 let currentNotificationTimer = null; // ← 通知タイマーをグローバルで管理
 
 
@@ -295,24 +326,63 @@ document.getElementById("notification-ask").onclick = () => {
 
 // ✅「送信」ボタン → GPTへ送信
 document.getElementById("submit-inner").onclick = async () => {
-  console.log("Debug: Modal '送信' (submit-inner) button clicked."); // ← 追加
-  const innerText = document.getElementById("gpt-inner-text").value.trim();
-  if (!innerText) {
-    console.log("Debug: Modal text is empty. Not submitting."); // ← 追加
-    return;
+  const gptInnerTextarea = document.getElementById("gpt-inner-text");
+  const userMessage = gptInnerTextarea.value.trim();
+
+  if (!userMessage) {
+    return; // 入力が空なら何もしない
   }
 
-  appendMessage("あなた", innerText);
+  // 1. ユーザーのメッセージをモーダル内のチャット履歴に表示
+  appendToModalChatHistory("あなた", userMessage, true);
 
-  // --- ▼▼▼ APIキーがないため、一時的にコメントアウトしてテスト ▼▼▼ ---
-const reply = await queryChatGPT(innerText);
-appendMessage("Nozomi", reply);
-  console.log("Debug: GPT call is commented out for testing."); // ← 追加 (API呼び出しをコメントアウトした場合)
-  // --- ▲▲▲ APIキーがないため、一時的にコメントアウトしてテスト ▲▲▲ ---
+  // 2. 入力用テキストエリアをクリアしてフォーカス
+  gptInnerTextarea.value = "";
+  gptInnerTextarea.focus();
 
-  document.getElementById("gpt-inner-text").value = "";
-  document.getElementById("gpt-input-modal").style.display = "none";
-  console.log("Debug: Modal '送信' - gpt-input-modal display set to none."); // ← 追加
+  // 3. APIにメッセージを送信して応答を得る
+  // 「考え中...」を履歴に追加 (一時的な表示)
+  const tempThinkingMessageDiv = document.createElement("div");
+  tempThinkingMessageDiv.setAttribute("id", "temp-thinking-message"); // IDを振って後で削除しやすくする
+  tempThinkingMessageDiv.style.marginBottom = "8px";
+  const thinkingSender = document.createElement("strong");
+  thinkingSender.textContent = "nozomi: ";
+  thinkingSender.style.color = "#196f3d";
+  tempThinkingMessageDiv.appendChild(thinkingSender);
+  tempThinkingMessageDiv.appendChild(document.createTextNode("考え中..."));
+
+  const modalChatHistory = document.getElementById("modal-chat-history");
+  if (modalChatHistory) {
+      modalChatHistory.appendChild(tempThinkingMessageDiv);
+      modalChatHistory.scrollTop = modalChatHistory.scrollHeight;
+  }
+
+
+  try {
+    const apiReply = await queryChatGPT(userMessage); // 既存のAPI呼び出し関数
+
+    // 「考え中...」のメッセージを削除
+    const thinkingMsgElement = document.getElementById("temp-thinking-message");
+    if (thinkingMsgElement) {
+        thinkingMsgElement.remove();
+    }
+
+    // 4. API (nozomi) の応答をモーダル内のチャット履歴に表示
+    if (apiReply && apiReply.trim() !== "") {
+      appendToModalChatHistory("nozomi", apiReply, false);
+    } else if (apiReply === "") { 
+      appendToModalChatHistory("nozomi", "(応答がありませんでした)", false);
+    }
+
+  } catch (error) {
+    console.error("API Error in modal (submit-inner):", error);
+    // エラー発生時も「考え中...」を削除
+    const thinkingMsgElement = document.getElementById("temp-thinking-message");
+    if (thinkingMsgElement) {
+        thinkingMsgElement.remove();
+    }
+    appendToModalChatHistory("nozomi", "エラーが発生しました。しばらくしてからもう一度お試しください。", false);
+  }
 };
 
 // ✅「キャンセル」ボタン → モーダルを閉じる

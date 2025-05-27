@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Nozomi</title>
+  <title>nozomi</title>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
     #chatbox { width: 100%; height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
@@ -63,7 +63,7 @@
 </div>
 
 
-<!-- 🧠 Nozomi専用：心の声を入力するモーダルUI -->
+<!--  nozomi専用：心の声を入力するモーダルUI -->
 <div id="gpt-input-modal" style="
   display: none;
   position: fixed; /* 画面に対して固定位置 */
@@ -81,13 +81,24 @@
   max-width: 500px;
 ">
   <p style="margin-bottom: 8px;">もしよければ、今感じていることを教えてください。</p>
-  <textarea id="gpt-inner-text" rows="4" style="width: 100%; padding: 10px; font-size: 14px;"></textarea>
+
+  <div id="modal-chat-history" style="
+    height: 180px; 
+    overflow-y: auto; 
+    border: 1px solid #e0e0e0; 
+    padding: 10px; 
+    margin-bottom: 15px; 
+    background-color: #f8f9fa; 
+    font-size: 13px; 
+    line-height: 1.6; 
+  ">
+    </div>
+  <textarea id="gpt-inner-text" rows="3" style="width: 100%; padding: 10px; font-size: 14px;"></textarea>
   <div style="text-align: right; margin-top: 10px;">
     <button id="submit-inner" style="margin-right: 10px;">送信</button>
     <button id="cancel-inner">キャンセル</button>
   </div>
-</div>
-
+  </div>
 
 <script src="script.js"></script>  
 </body>
